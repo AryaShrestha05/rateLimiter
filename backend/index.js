@@ -1,5 +1,8 @@
 const Redis = require('ioredis');
-const redis = new Redis();
+const redis = new Redis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: 6379
+});
 
 const express = require('express');
 const app = express();
@@ -76,6 +79,29 @@ app.get('/api/hello', async (req, res) => {
         tokens: Math.floor(result.tokens),
         server: PORT
     });
+});
+
+// Get current tokens without consuming (for UI polling)
+app.get('/api/tokens', async (req, res) => {
+    const userId = req.ip || 'unknown';
+    const now = Date.now();
+    const tokensKey = `ratelimit:${userId}:tokens`;
+    const lastRefillKey = `ratelimit:${userId}:lastRefill`;
+
+    const [tokensStr, lastRefillStr] = await Promise.all([
+        redis.get(tokensKey),
+        redis.get(lastRefillKey)
+    ]);
+
+    let tokens = tokensStr ? parseFloat(tokensStr) : BUCKET_CAPACITY;
+    let lastRefill = lastRefillStr ? parseInt(lastRefillStr) : now;
+
+    // Calculate refilled tokens
+    const elapsed = now - lastRefill;
+    const tokensToAdd = Math.floor(elapsed / REFILL_INTERVAL_MS) * REFILL_RATE;
+    tokens = Math.min(BUCKET_CAPACITY, tokens + tokensToAdd);
+
+    res.json({ tokens: Math.floor(tokens) });
 });
 
 app.get('/health', (req, res) => {

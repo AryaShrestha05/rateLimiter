@@ -19,7 +19,6 @@ Nginx (load balancer)
    ├──────────┼──────────┐
    ▼          ▼          ▼
 Node.js    Node.js    Node.js
-(3001)     (3002)     (3003)
    │          │          │
    └──────────┼──────────┘
               ▼
@@ -32,9 +31,9 @@ Node.js    Node.js    Node.js
 
 ## Rate Limiting Algorithm
 
-Tokenized algorithm method:
+Token bucket algorithm:
 
-1. Each user has a bucket with maximum 5 tokens (for demo purposes)
+1. Each user has a bucket with maximum 5 tokens
 2. Each request consumes 1 token
 3. Tokens refill at 1 token per 2 seconds
 4. No tokens = request blocked
@@ -61,7 +60,23 @@ Why token bucket over fixed window:
 - Smooths traffic over time
 - No boundary exploit (fixed window allows 10 requests in 1 second if timed at window edge)
 
-## Running locally
+## Running with Docker
+
+The easiest way to run everything:
+
+```bash
+docker-compose up --build
+```
+
+Open http://localhost:3000
+
+To stop:
+
+```bash
+docker-compose down
+```
+
+## Running locally (without Docker)
 
 ### Prerequisites
 
@@ -108,16 +123,21 @@ for i in {1..8}; do curl -s http://localhost:8080/api/hello | jq -r '.message //
 ```
 ├── backend/
 │   ├── index.js          # Express server with rate limiting logic
+│   ├── Dockerfile
 │   └── package.json
 ├── frontend/
 │   ├── src/
 │   │   └── App.jsx       # React demo UI
+│   ├── Dockerfile
 │   └── package.json
-└── nginx.conf            # Load balancer configuration
+├── nginx/
+│   └── nginx.conf        # Load balancer config for Docker
+├── docker-compose.yml
+└── nginx.conf            # Load balancer config for local dev
 ```
 
 ## Tech stack
 
 - **Backend:** Node.js, Express, ioredis
 - **Frontend:** React, Vite
-- **Infrastructure:** Nginx, Redis
+- **Infrastructure:** Nginx, Redis, Docker
