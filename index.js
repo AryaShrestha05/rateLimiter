@@ -4,6 +4,10 @@ const redis = new Redis();
 const express = require('express');
 const app = express();
 
+// Trust proxy - required for X-Forwarded-For header to work with nginx
+// This makes req.ip return the real client IP instead of nginx's IP
+app.set('trust proxy', true);
+
 const LIMIT = 5;               // Max requests allowed
 const WINDOW_SIZE_MS = 10000;  // Time window (10 seconds for easy testing)
 
@@ -56,7 +60,7 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('');
     console.log('='.repeat(50));
