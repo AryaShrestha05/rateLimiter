@@ -1,168 +1,123 @@
 # Distributed Rate Limiter
 
-A distributed rate limiting service built from scratch to learn distributed systems concepts.
+A rate limiter built from scratch to demonstrate distributed systems: load balancing, shared state, and horizontal scaling.
 
-## What Is This?
+## Why I built this?
 
-A rate limiter controls how many requests a user can make to an API within a time window. This project implements a **fixed window** rate limiting algorithm, with plans to evolve into a fully distributed system.
+A naive rate limiter stores request counts in memory. That works until you scale to multiple servers. Each server has its own count, so a client can hit server A five times, then server B five times, bypassing your limit entirely.
+
+This project solves that problem with Redis as a shared store and Nginx as a load balancer.
 
 ## Architecture
 
 ```
-Current (Phase 1):
-┌─────────────────┐
-│     Client      │
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│  Rate Limiter   │
-│   (single)      │
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│   In-Memory     │
-│    Storage      │
-└─────────────────┘
-
-Coming Soon (Phase 2+):
-┌─────────────────┐
-│     Client      │
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│  Load Balancer  │
-└────────┬────────┘
-         │
-   ┌─────┴─────┐
-   │     │     │
-┌──▼──┐┌──▼──┐┌──▼──┐
-│ RL1 ││ RL2 ││ RL3 │
-└──┬──┘└──┬──┘└──┬──┘
-   │     │     │
-   └─────┼─────┘
-         │
-  ┌──────▼──────┐
-  │    Redis    │
-  └─────────────┘
+Client
+   │
+   ▼
+Nginx (load balancer)
+   │
+   ├──────────┼──────────┐
+   ▼          ▼          ▼
+Node.js    Node.js    Node.js
+(3001)     (3002)     (3003)
+   │          │          │
+   └──────────┼──────────┘
+              ▼
+           Redis
 ```
 
-## How It Works
+- **Nginx** distributes incoming requests across three Node.js instances using round-robin
+- **Redis** stores request counts, shared across all instances
+- **Node.js** servers are stateless—any server can handle any request
 
-**Fixed Window Algorithm:**
-- Divide time into fixed windows (e.g., 10 seconds)
-- Count requests per user per window
-- Block if count exceeds limit
-- Reset count when new window starts
+## Rate Limiting Algorithm
+
+Tokenized algorithm method:
+
+1. Each user has a bucket with maximum 5 tokens (for demo purposes)
+2. Each request consumes 1 token
+3. Tokens refill at 1 token per 2 seconds
+4. No tokens = request blocked
 
 ```
-Window 1 (0-10s)         Window 2 (10-20s)
-├───────────────────────┼───────────────────────┤
- Req1 Req2 Req3 Req4 Req5  Req1 Req2 ...
-  ✓    ✓    ✓    ✓    ✓     ✓    ✓   (reset!)
-                     Req6
-                      ✗ (blocked)
+Bucket: [●●●●●] 5 tokens
+
+Request 1: [●●●●○] 4 tokens remaining ✓
+Request 2: [●●●○○] 3 tokens remaining ✓
+Request 3: [●●○○○] 2 tokens remaining ✓
+Request 4: [●○○○○] 1 token remaining  ✓
+Request 5: [○○○○○] 0 tokens remaining ✓
+Request 6: [○○○○○] blocked            ✗
+
+...2 seconds later...
+
+Refill:    [●○○○○] 1 token added
+Request 7: [○○○○○] 0 tokens remaining ✓
 ```
 
-## Getting Started
+Why token bucket over fixed window:
+
+- Allows controlled bursts (use all 5 tokens at once if needed)
+- Smooths traffic over time
+- No boundary exploit (fixed window allows 10 requests in 1 second if timed at window edge)
+
+## Running locally
 
 ### Prerequisites
+
 - Node.js 18+
-- npm
-
-### Installation
-
-```bash
-git clone https://github.com/yourusername/rateLimiter.git
-cd rateLimiter
-npm install
-```
-
-### Run the Server
-
-```bash
-# Development (auto-reload)
-npm run dev
-
-# Production
-npm start
-```
-
-### Test It
-
-```bash
-# Single request
-curl http://localhost:3000/api/hello
-
-# Spam requests (should block after 5)
-for i in 1 2 3 4 5 6 7 8; do curl http://localhost:3000/api/hello; echo ""; done
-```
-
-**Expected output:**
-```
-{"message":"Success! Request allowed."}  # Requests 1-5
-{"message":"Success! Request allowed."}
-{"message":"Success! Request allowed."}
-{"message":"Success! Request allowed."}
-{"message":"Success! Request allowed."}
-{"error":"Too many requests"...}         # Requests 6+
-{"error":"Too many requests"...}
-{"error":"Too many requests"...}
-```
-
-## Configuration
-
-Edit `index.js`:
-
-```javascript
-const LIMIT = 5;               // Max requests per window
-const WINDOW_SIZE_MS = 10000;  // Window size (10 seconds)
-```
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/hello` | GET | Rate-limited test endpoint |
-| `/health` | GET | Health check (not rate-limited) |
-
-## Response Headers
-
-Every response includes rate limit info:
-
-```
-X-RateLimit-Limit: 5
-X-RateLimit-Remaining: 3
-X-RateLimit-Reset: 1705934567
-```
-
-## Project Roadmap
-
-- [x] Phase 1: Single server, in-memory storage
-- [ ] Phase 2: Add Redis for distributed state
-- [ ] Phase 3: Multiple instances + load balancer
-- [ ] Phase 4: Dockerize
-- [ ] Phase 5: Deploy to Kubernetes
-- [ ] Phase 6: Add monitoring (Prometheus/Grafana)
-
-## Tech Stack
-
-**Current:**
-- Node.js
-- Express 5
-
-**Coming:**
 - Redis
-- Docker
-- Kubernetes
 - Nginx
 
-## What I Learned
+### Start services
 
-- Rate limiting algorithms (fixed window, sliding window, token bucket)
-- Why distributed state is hard
-- How `Math.floor(time / windowSize)` creates time windows
-- Trade-offs between consistency and availability
+```bash
+# Terminal 1: Redis
+redis-server
 
-## License
+# Terminal 2: Backend servers
+cd backend
+npm install
+PORT=3001 node index.js &
+PORT=3002 node index.js &
+PORT=3003 node index.js
 
-MIT
+# Terminal 3: Nginx
+nginx -c $(pwd)/nginx.conf
+
+# Terminal 4: Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173
+
+### Test via CLI
+
+```bash
+# Single request through load balancer
+curl http://localhost:8080/api/hello
+
+# Spam 8 requests (5 allowed, 3 blocked)
+for i in {1..8}; do curl -s http://localhost:8080/api/hello | jq -r '.message // .error'; done
+```
+
+## Project structure
+
+```
+├── backend/
+│   ├── index.js          # Express server with rate limiting logic
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   └── App.jsx       # React demo UI
+│   └── package.json
+└── nginx.conf            # Load balancer configuration
+```
+
+## Tech stack
+
+- **Backend:** Node.js, Express, ioredis
+- **Frontend:** React, Vite
+- **Infrastructure:** Nginx, Redis
