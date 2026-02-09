@@ -1,12 +1,16 @@
-import { Router} from "express";
+import { Router } from "express";
 import { validationResult, checkSchema, matchedData } from "express-validator";
-import { loginUserSchema } from "../utils/validationResult.js";
+import { loginUserSchema } from "../utils/validationSchemas.js";
+import pool from '../src/db.js';
 
+const router = Router();
 
-const router = Router()
-
-app.post("/api/login", checkSchema(loginUserSchema), (req,res) => {
+router.post("/api/register", checkSchema(loginUserSchema), (req, res) => {
   const result = validationResult(req);
-  if(result.isEmpty()) return res.sendStatus(400).send({msg: "Invalid Credintials!"});
-  
+  if (!result.isEmpty()) 
+    return res.status(400).send({ msg: "Invalid Credentials!" });
+  const data = matchedData(req);
+  res.send(data);
 });
+
+export default router;

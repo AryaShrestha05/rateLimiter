@@ -5,14 +5,31 @@ services:
     image: redis:7-alpine
     container_name: redis
 
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ratelimiter
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   node1:
     build: ./backend
     container_name: node1
     environment:
       - PORT=3000
       - REDIS_HOST=redis
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=ratelimiter
     depends_on:
       - redis
+      - postgres
 
   node2:
     build: ./backend
@@ -20,8 +37,13 @@ services:
     environment:
       - PORT=3000
       - REDIS_HOST=redis
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=ratelimiter
     depends_on:
       - redis
+      - postgres
 
   node3:
     build: ./backend
@@ -29,8 +51,13 @@ services:
     environment:
       - PORT=3000
       - REDIS_HOST=redis
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=ratelimiter
     depends_on:
       - redis
+      - postgres
 
   loadbalancer:
     image: nginx:alpine
@@ -44,16 +71,5 @@ services:
       - node2
       - node3
 
-  postgres: # <-- ADD THIS BLOCK
-    image: postgres:15-alpine
-    container_name: postgres
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=ratelimiter
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
 volumes:
   postgres_data:

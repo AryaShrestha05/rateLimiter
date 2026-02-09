@@ -6,15 +6,17 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "psql -U postgres -d ratelimiter -h localhost -f migrations/001_init.sql"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "express": "^5.2.1",
-    "ioredis": "^5.9.2"
+    "ioredis": "^5.9.2",
+    "pg": "^8.18.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
