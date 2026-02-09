@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('');
     console.log('='.repeat(50));
-    console.log('  TOKEN BUCKET RATE LIMITER');
+    console.log('  RATE LIMITER');
     console.log('='.repeat(50));
     console.log(`  URL: http://localhost:${PORT}`);
     console.log('='.repeat(50));
