@@ -4,8 +4,8 @@ import Redis from 'ioredis';
 const router = Router();
 
 const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: 6379
+  host: 'localhost',
+  port: 6379,
 });
 
 // Token bucket configuration

@@ -1,6 +1,4 @@
 {
-  "dependencies": {
-    "express-validator": "^7.3.1",
-    "pg": "^8.18.0"
-  }
+  "name": "ratelimiter-root",
+  "private": true
 }

@@ -1,12 +1,11 @@
 {
   "name": "ratelimiter",
   "version": "1.0.0",
-  "description": "",
+  "description": "Rate limiter API with token bucket algorithm",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "psql -U postgres -d ratelimiter -h localhost -f migrations/001_init.sql"
   },
   "keywords": [],
@@ -15,6 +14,7 @@
   "type": "module",
   "dependencies": {
     "express": "^5.2.1",
+    "express-validator": "^7.3.1",
     "ioredis": "^5.9.2",
     "pg": "^8.18.0"
   },
