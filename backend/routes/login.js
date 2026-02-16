@@ -8,7 +8,7 @@ const router = Router();
 router.post("/api/register", checkSchema(loginUserSchema), async (req, res) => {
   const result = validationResult(req);
   if (!result.isEmpty()) 
-    return res.status(400).send({ msg: "Invalid Credentials!" });
+    return res.status(400).send(result.array());
   const data = matchedData(req);
   const insertResult = await pool.query(
     `INSERT INTO users (email, passwords_hash)

@@ -6,7 +6,7 @@ export const loginUserSchema = {
   password: {
     isLength: {
       options: { min: 3 },
-      errorMessage: 'Password should be at least 8 chars',
+      errorMessage: 'Password should be at least 3 chars',
     },
   },
 }
