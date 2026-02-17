@@ -5,9 +5,9 @@ import pool from './src/db.js';
 import loginRouter from './routes/login.js';
 import tokenRouter from './routes/tokenLogic.js';
 import passport from 'passport';
-const PgStore = connectPgSimple(session);
 import './strategies/local-strategy.js';
 
+const PgStore = connectPgSimple(session);
 const app = express();
 
 app.use(express.json());
@@ -16,7 +16,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        //secure: false, set to true in production (HTTPS only)
+        secure: false, // set to true in production (HTTPS only)
         maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
     },
     store: new PgStore({
@@ -30,17 +30,6 @@ app.use(passport.session());
 
 app.use(loginRouter);
 app.use(tokenRouter);
-
-app.get('/', (req, res) => {
-  req.session.visited = true;
-  res.status(200).send({msg: "Hello"});
-});
-
-app.post('/api/auth', passport.authenticate('local'), (req,res) => {
-    res.status(200).send({msg: "Login successful"});
-    console.log(req.user);
-    console.log(req.session);
-});
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
