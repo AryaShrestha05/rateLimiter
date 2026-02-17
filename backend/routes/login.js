@@ -4,6 +4,7 @@ import { loginUserSchema } from "../utils/validationSchemas.js";
 import pool from '../src/db.js';
 import { hashPassword } from "../utils/helpers.js";
 import passport from "passport";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -24,7 +25,7 @@ router.post("/api/register", checkSchema(loginUserSchema), async (req, res) => {
 });
 
 // Login — starts a session
-router.post("/api/auth", passport.authenticate('local'), (req, res) => {
+router.post("/api/login", passport.authenticate('local'), (req, res) => {
   res.status(200).send({
     msg: "Login successful",
     user: { id: req.user.id, email: req.user.email, plan: req.user.plan }
@@ -43,10 +44,7 @@ router.post("/api/logout", (req, res) => {
 });
 
 // Check who's logged in
-router.get("/api/me", (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).send({ msg: "Not logged in" });
-  }
+router.get("/api/me", requireAuth, (req, res) => {
   res.status(200).send({ user: req.user });
 });
 

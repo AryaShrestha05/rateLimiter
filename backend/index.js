@@ -6,6 +6,7 @@ import loginRouter from './routes/login.js';
 import tokenRouter from './routes/tokenLogic.js';
 import passport from 'passport';
 import './strategies/local-strategy.js';
+import apiKeysRouter from './routes/apiKeys.js';
 
 const PgStore = connectPgSimple(session);
 const app = express();
@@ -30,6 +31,7 @@ app.use(passport.session());
 
 app.use(loginRouter);
 app.use(tokenRouter);
+app.use(apiKeysRouter);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
