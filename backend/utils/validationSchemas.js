@@ -1,4 +1,12 @@
 export const loginUserSchema = {
+  f_name: {
+    notEmpty: true,
+    errorMessage: 'First name is required',
+  },
+  l_name: {
+    notEmpty: true,
+    errorMessage: 'Last name is required',
+  },
   email: {
     errorMessage: 'Invalid username',
     isEmail: true,

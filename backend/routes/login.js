@@ -16,10 +16,10 @@ router.post("/api/register", checkSchema(loginUserSchema), async (req, res) => {
   const data = matchedData(req);
   const hashedPassword = hashPassword(data.password);
   const insertResult = await pool.query(
-    `INSERT INTO users (name, email, passwords_hash)
-     VALUES ($1, $2, $3)
+    `INSERT INTO users (f_name, l_name, email, passwords_hash)
+     VALUES ($1, $2, $3, $4)
      RETURNING id, email, plan, created_at`,
-    [data.name, data.email, hashedPassword]
+    [data.f_name, data.l_name, data.email, hashedPassword]
   );
   res.status(201).send(insertResult.rows[0]);
 });

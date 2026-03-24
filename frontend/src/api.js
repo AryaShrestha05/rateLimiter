@@ -13,8 +13,8 @@ async function request(method, path, body) {
 }
 
 export const api = {
-  register: (name, email, password) =>
-    request('POST', '/register', { name, email, password }),
+  register: (f_name, l_name, email, password) =>
+    request('POST', '/register', { f_name, l_name, email, password }),
   login: (email, password) =>
     request('POST', '/login', { email, password }),
   logout: () =>
