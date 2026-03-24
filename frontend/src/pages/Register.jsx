@@ -5,7 +5,7 @@ import Input from '../components/Input';
 import Button from '../components/Button';
 
 export default function Register({ onSuccess, onSwitch }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ f_name: '', l_name: '', email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -22,7 +22,7 @@ export default function Register({ onSuccess, onSwitch }) {
     setServerError('');
     try {
       // Register then immediately log in
-      await api.register(form.name, form.email, form.password);
+      await api.register(form.f_name, form.l_name, form.email, form.password);
       const data = await api.login(form.email, form.password);
       onSuccess(data.user);
     } catch (err) {
@@ -49,13 +49,23 @@ export default function Register({ onSuccess, onSwitch }) {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
-          label="Name"
+          label="First Name"
           type="text"
-          placeholder="Your name"
-          value={form.name}
-          onChange={e => set('name', e.target.value)}
-          error={errors.name}
+          placeholder="First name"
+          value={form.f_name}
+          onChange={e => set('f_name', e.target.value)}
+          error={errors.f_name}
           autoFocus
+          required
+        />
+        <Input
+          label="Last Name"
+          type="text"
+          placeholder="Last name"
+          value={form.l_name}
+          onChange={e => set('l_name', e.target.value)}
+          error={errors.l_name}
+          required
         />
         <Input
           label="Email"
