@@ -1,5 +1,6 @@
-export default function Button({ children, loading, variant = 'primary', ...props }) {
-  const base = 'w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2';
+const Button = ({ children, loading, variant = 'primary', ...props }) => {
+  const base =
+    'w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2';
 
   const variants = {
     primary: 'bg-zinc-100 text-zinc-900 hover:bg-white active:scale-[0.98]',
@@ -18,4 +19,6 @@ export default function Button({ children, loading, variant = 'primary', ...prop
       {children}
     </button>
   );
-}
+};
+
+export default Button;

@@ -4,35 +4,33 @@ import AuthLayout from '../components/AuthLayout';
 import Input from '../components/Input';
 import Button from '../components/Button';
 
-export default function Register({ onSuccess, onSwitch }) {
+const Register = ({ onSuccess, onSwitch }) => {
   const [form, setForm] = useState({ f_name: '', l_name: '', email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
 
-  function set(field, value) {
-    setForm(f => ({ ...f, [field]: value }));
-    setErrors(e => ({ ...e, [field]: '' }));
+  const updateField = (field, value) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    setErrors((e) => ({ ...e, [field]: '' }));
     setServerError('');
-  }
+  };
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setServerError('');
     try {
-      // Register then immediately log in
       await api.register(form.f_name, form.l_name, form.email, form.password);
       const data = await api.login(form.email, form.password);
       onSuccess(data.user);
     } catch (err) {
       const data = err?.data;
       if (Array.isArray(data)) {
-        // express-validator errors
-        const fieldErrors = {};
-        data.forEach(e => {
-          if (e.path) fieldErrors[e.path] = e.msg;
-        });
+        const fieldErrors = data.reduce((acc, { path, msg }) => {
+          if (path) acc[path] = msg;
+          return acc;
+        }, {});
         setErrors(fieldErrors);
       } else {
         setServerError(data?.msg || data?.message || 'Registration failed');
@@ -40,7 +38,7 @@ export default function Register({ onSuccess, onSwitch }) {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <AuthLayout>
@@ -53,7 +51,7 @@ export default function Register({ onSuccess, onSwitch }) {
           type="text"
           placeholder="First name"
           value={form.f_name}
-          onChange={e => set('f_name', e.target.value)}
+          onChange={(e) => updateField('f_name', e.target.value)}
           error={errors.f_name}
           autoFocus
           required
@@ -63,7 +61,7 @@ export default function Register({ onSuccess, onSwitch }) {
           type="text"
           placeholder="Last name"
           value={form.l_name}
-          onChange={e => set('l_name', e.target.value)}
+          onChange={(e) => updateField('l_name', e.target.value)}
           error={errors.l_name}
           required
         />
@@ -72,7 +70,7 @@ export default function Register({ onSuccess, onSwitch }) {
           type="email"
           placeholder="you@example.com"
           value={form.email}
-          onChange={e => set('email', e.target.value)}
+          onChange={(e) => updateField('email', e.target.value)}
           error={errors.email}
           required
         />
@@ -81,7 +79,7 @@ export default function Register({ onSuccess, onSwitch }) {
           type="password"
           placeholder="Min 3 characters"
           value={form.password}
-          onChange={e => set('password', e.target.value)}
+          onChange={(e) => updateField('password', e.target.value)}
           error={errors.password}
           required
         />
@@ -99,10 +97,16 @@ export default function Register({ onSuccess, onSwitch }) {
 
       <p className="text-center text-sm text-zinc-500 mt-6">
         Already have an account?{' '}
-        <button onClick={onSwitch} className="text-zinc-300 hover:text-white transition-colors underline underline-offset-2">
+        <button
+          type="button"
+          onClick={onSwitch}
+          className="text-zinc-300 hover:text-white transition-colors underline underline-offset-2"
+        >
           Sign in
         </button>
       </p>
     </AuthLayout>
   );
-}
+};
+
+export default Register;

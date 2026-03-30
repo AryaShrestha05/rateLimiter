@@ -4,16 +4,23 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 
-export default function App() {
+const App = () => {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState('login');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.me()
-      .then(data => setUser(data.user))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    const loadSession = async () => {
+      try {
+        const data = await api.me();
+        setUser(data.user);
+      } catch {
+        /* not logged in */
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSession();
   }, []);
 
   if (loading) {
@@ -33,4 +40,6 @@ export default function App() {
   }
 
   return <Login onSuccess={setUser} onSwitch={() => setPage('register')} />;
-}
+};
+
+export default App;
