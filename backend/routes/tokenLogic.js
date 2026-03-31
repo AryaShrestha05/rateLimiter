@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Redis from 'ioredis';
+import pool from '../src/db.js';
 
 const router = Router();
 
@@ -8,15 +9,13 @@ const redis = new Redis({
   port: 6379,
 });
 
-// Token bucket configuration
-const BUCKET_CAPACITY = 5;      // Max tokens a user can have
-const REFILL_RATE = 1;          // Tokens added per interval
-const REFILL_INTERVAL_MS = 2000; // Add 1 token every 2 seconds
-
-async function isAllowed(userId) {
+// isAllowed now accepts the key's own config instead of hardcoded constants
+async function isAllowed(keyId, capacity, refillRate, refillIntervalMs) {
     const now = Date.now();
-    const tokensKey = `ratelimit:${userId}:tokens`;
-    const lastRefillKey = `ratelimit:${userId}:lastRefill`;
+
+    // Redis keys are namespaced by the api key's id (a UUID from the DB)
+    const tokensKey = `ratelimit:${keyId}:tokens`;
+    const lastRefillKey = `ratelimit:${keyId}:lastRefill`;
 
     // Get current state from Redis
     const [tokensStr, lastRefillStr] = await Promise.all([
@@ -24,21 +23,22 @@ async function isAllowed(userId) {
         redis.get(lastRefillKey)
     ]);
 
-    let tokens = tokensStr ? parseFloat(tokensStr) : BUCKET_CAPACITY;
+    // If this key has never been used, start it at full capacity
+    let tokens = tokensStr ? parseFloat(tokensStr) : capacity;
     let lastRefill = lastRefillStr ? parseInt(lastRefillStr) : now;
 
     // Calculate tokens to add based on time elapsed
     const elapsed = now - lastRefill;
-    const tokensToAdd = Math.floor(elapsed / REFILL_INTERVAL_MS) * REFILL_RATE;
+    const tokensToAdd = Math.floor(elapsed / refillIntervalMs) * refillRate;
 
     if (tokensToAdd > 0) {
-        tokens = Math.min(BUCKET_CAPACITY, tokens + tokensToAdd);
+        // Cap at the key's own capacity, not a hardcoded number
+        tokens = Math.min(capacity, tokens + tokensToAdd);
         lastRefill = now;
     }
 
     // Try to consume a token
     if (tokens < 1) {
-        // No tokens available - blocked
         await Promise.all([
             redis.set(tokensKey, tokens),
             redis.set(lastRefillKey, lastRefill)
@@ -46,10 +46,8 @@ async function isAllowed(userId) {
         return { allowed: false, tokens: tokens };
     }
 
-    // Consume 1 token
     tokens -= 1;
 
-    // Save state to Redis
     await Promise.all([
         redis.set(tokensKey, tokens),
         redis.set(lastRefillKey, lastRefill)
@@ -59,10 +57,36 @@ async function isAllowed(userId) {
 }
 
 router.get('/api/hello', async (req, res) => {
-  const userId = req.ip || 'unknown';
-  console.log('Request from:', userId);
+  // Read the api key the caller sent in the request header
+  const apiKey = req.headers['x-api-key'];
 
-  const result = await isAllowed(userId);
+  // If they didn't send one at all, reject immediately
+  if (!apiKey) {
+    return res.status(401).json({ error: 'Missing API key. Send x-api-key header.' });
+  }
+
+  // Look up the key in the database to make sure it exists and is active
+  // $1 is a placeholder - pool.query safely inserts apiKey there (prevents SQL injection)
+  const { rows } = await pool.query(
+    'SELECT * FROM api_keys WHERE key = $1 AND is_active = true',
+    [apiKey]
+  );
+
+  // rows is an array of matching DB rows. If empty, the key is wrong or disabled
+  if (rows.length === 0) {
+    return res.status(401).json({ error: 'Invalid or inactive API key.' });
+  }
+
+  // rows[0] is the first (and only) matching row - the key's full record from DB
+  const keyRow = rows[0];
+
+  // Now run the rate limiter using this key's own settings from the DB
+  const result = await isAllowed(
+    keyRow.id,                  // unique bucket identity per key
+    keyRow.bucket_capacity,     // how many tokens max (set when key was created)
+    keyRow.refill_rate,         // how many tokens to add per interval
+    keyRow.refill_interval_ms   // how often to refill
+  );
 
   if (!result.allowed) {
     return res.status(429).json({
@@ -80,23 +104,37 @@ router.get('/api/hello', async (req, res) => {
 
 // Get current tokens without consuming (for UI polling)
 router.get('/api/tokens', async (req, res) => {
-  const userId = req.ip || 'unknown';
+  const apiKey = req.headers['x-api-key'];
+
+  if (!apiKey) {
+    return res.status(401).json({ error: 'Missing API key. Send x-api-key header.' });
+  }
+
+  const { rows } = await pool.query(
+    'SELECT * FROM api_keys WHERE key = $1 AND is_active = true',
+    [apiKey]
+  );
+
+  if (rows.length === 0) {
+    return res.status(401).json({ error: 'Invalid or inactive API key.' });
+  }
+
+  const keyRow = rows[0];
   const now = Date.now();
-  const tokensKey = `ratelimit:${userId}:tokens`;
-  const lastRefillKey = `ratelimit:${userId}:lastRefill`;
+  const tokensKey = `ratelimit:${keyRow.id}:tokens`;
+  const lastRefillKey = `ratelimit:${keyRow.id}:lastRefill`;
 
   const [tokensStr, lastRefillStr] = await Promise.all([
     redis.get(tokensKey),
     redis.get(lastRefillKey)
   ]);
 
-  let tokens = tokensStr ? parseFloat(tokensStr) : BUCKET_CAPACITY;
+  let tokens = tokensStr ? parseFloat(tokensStr) : keyRow.bucket_capacity;
   let lastRefill = lastRefillStr ? parseInt(lastRefillStr) : now;
 
-  // Calculate refilled tokens
   const elapsed = now - lastRefill;
-  const tokensToAdd = Math.floor(elapsed / REFILL_INTERVAL_MS) * REFILL_RATE;
-  tokens = Math.min(BUCKET_CAPACITY, tokens + tokensToAdd);
+  const tokensToAdd = Math.floor(elapsed / keyRow.refill_interval_ms) * keyRow.refill_rate;
+  tokens = Math.min(keyRow.bucket_capacity, tokens + tokensToAdd);
 
   res.json({ tokens: Math.floor(tokens) });
 });
