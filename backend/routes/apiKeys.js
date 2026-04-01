@@ -8,6 +8,14 @@ const router = Router();
 router.post("/api/keys", requireAuth, async (req, res) => {
   const apiKey = "rk_" + crypto.randomBytes(24).toString('hex');
 
+  const currentKeys = await pool.query(
+    `SELECT * FROM api_keys WHERE user_id = $1`,
+    [req.user.id]
+  );
+  if (currentKeys.rows.length >= 3) {
+    return res.status(400).send({ msg: "You can only have at most 3 keys" });
+  }
+
   const result = await pool.query(
     `INSERT INTO api_keys (key, user_id)
      VALUES ($1, $2)

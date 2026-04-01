@@ -29,4 +29,8 @@ export const api = {
   logout: () => request('POST', '/logout'),
 
   me: () => request('GET', '/me'),
+
+  getKeys: () => request('GET', '/keys'),
+  createKey: () => request('POST', '/keys'),
+  deleteKey: (id) => request('DELETE', `/keys/${id}`),
 };
