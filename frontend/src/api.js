@@ -23,13 +23,10 @@ const request = async (method, path, body) => {
 export const api = {
   register: (f_name, l_name, email, password) =>
     request('POST', '/register', { f_name, l_name, email, password }),
-
+  
   login: (email, password) => request('POST', '/login', { email, password }),
-
   logout: () => request('POST', '/logout'),
-
   me: () => request('GET', '/me'),
-
   getKeys: () => request('GET', '/keys'),
   createKey: () => request('POST', '/keys'),
   deleteKey: (id) => request('DELETE', `/keys/${id}`),

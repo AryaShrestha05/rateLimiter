@@ -66,7 +66,6 @@ router.get('/api/hello', async (req, res) => {
   }
 
   // Look up the key in the database to make sure it exists and is active
-  // $1 is a placeholder - pool.query safely inserts apiKey there (prevents SQL injection)
   const { rows } = await pool.query(
     'SELECT * FROM api_keys WHERE key = $1 AND is_active = true',
     [apiKey]
